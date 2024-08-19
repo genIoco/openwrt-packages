@@ -1,6 +1,8 @@
 name: 'Submodules Sync'
 
 on:
+  push:
+    branches: [ "dev" ]
   schedule:
   - cron: "10 2 * * *"
   # Allows you to run this workflow manually from the Actions tab or through HTTP API
@@ -64,4 +66,4 @@ jobs:
         git config --global user.email 'bot@noreply.github.com'
         git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
         git add .
-        git commit -am "Sync $(date +%Y-%m-%d" "%H:%M:%S)" && git push || echo "No changes to commit"
+        git commit -am "🦄 sync: $(date +%Y-%m-%d" "%H:%M:%S)" && git push || echo "No changes to commit"
