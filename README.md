@@ -17,3 +17,9 @@ git pull
 ./scripts/feeds install -a
 make menuconfig
 ```
+
+## openwrt 固件编译自定义软件包
+
+| 软件名                       | 说明                   | 中文说明    |
+| -----------------------------|------------------------| ------------|
+| cloudflared | cloudflare tunnel | cloudflare 隧道 |
