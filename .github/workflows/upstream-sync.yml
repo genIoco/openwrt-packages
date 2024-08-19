@@ -1,0 +1,67 @@
+name: 'Submodules Sync'
+
+on:
+  schedule:
+  - cron: "10 2 * * *"
+  # Allows you to run this workflow manually from the Actions tab or through HTTP API
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
+      branch:
+        description: 'Branch to sync'
+        required: false
+        default: 'dev'
+
+jobs:
+  sync:
+    name: 'Submodules Sync'
+    runs-on: ubuntu-latest
+
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.CI_TOKEN }}
+        submodules: true
+        ref: ${{ github.event.inputs.branch || 'dev' }}
+
+    - name: Set git identity
+      run: |
+        git config --global user.name 'Git bot'
+        git config --global user.email 'bot@noreply.github.com'
+    
+    # Update references
+    - name: Git Sumbodule Update
+      run: |
+        git pull --recurse-submodules
+        git submodule update --remote --recursive
+    
+    - name: SSH connection to Actions
+      uses: P3TERX/ssh2actions@v1.0.0
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: Sync upstream
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x $GITHUB_WORKSPACE/scripts/sync.sh
+        $GITHUB_WORKSPACE/scripts/sync.sh
+
+    - name: Commit update
+      run: |
+        git config --global user.name 'Git bot'
+        git config --global user.email 'bot@noreply.github.com'
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        git add .
+        git commit -am "Sync $(date +%Y-%m-%d" "%H:%M:%S)" && git push || echo "No changes to commit"
