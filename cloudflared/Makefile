@@ -1,56 +1,65 @@
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# Copyright (C) 2021 ImmortalWrt.org
+
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=cloudflared
-PKG_VERSION:=2022.5.1
+PKG_VERSION:=2024.8.2
 PKG_RELEASE:=1
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
-PKG_SOURCE_URL:=https://codeload.github.com/cloudflare/cloudflared/tar.gz/${PKG_VERSION}?
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_MD5SUM=0dc108472d2b849404f5ccc1ff8cd989
+PKG_SOURCE_URL:=https://codeload.github.com/cloudflare/cloudflared/tar.gz/$(PKG_VERSION)?
+PKG_HASH:=a6fe4be772ebf78f3a4ee615410e70f1aa95dafa1c173509d08fdd2f94bda3a8
 
-PKG_LICENSE:=CloudFlare
+PKG_LICENSE:=Apache-2.0
 PKG_LICENSE_FILES:=LICENSE
-PKG_MAINTAINER:=BH4EHN <edyuy@zmyseries.com>
+PKG_MAINTAINER:=Tianling Shen <cnsztl@immortalwrt.org>
 
 PKG_BUILD_DEPENDS:=golang/host
 PKG_BUILD_PARALLEL:=1
-PKG_USE_MIPS16:=0
+PKG_BUILD_FLAGS:=no-mips16
 
-GO_PKG:=github.com/cloudflare/cloudflared/cmd/cloudflared
-GO_PKG_LDFLAGS:=-s -w
-# PKG_CONFIG_DEPENDS:=
+GO_PKG:=github.com/cloudflare/cloudflared
+GO_PKG_LDFLAGS_X:=main.Version=$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
-include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
+include ../../lang/golang/golang-package.mk
 
-define Package/$(PKG_NAME)
-  TITLE:=Argo Tunnel client
-  URL:=https://developers.cloudflare.com/argo-tunnel/
+define Package/cloudflared
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=$(GO_ARCH_DEPENDS)
+  SUBMENU:=Web Servers/Proxies
+  TITLE:=Cloudflare Tunnel client
+  URL:=https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide
+  DEPENDS:=$(GO_ARCH_DEPENDS) +ca-bundle
 endef
 
-define Package/$(PKG_NAME)/description
-	Contains the command-line client and its libraries for Argo Tunnel, a tunneling daemon that proxies any local webserver through the Cloudflare network.
+define Package/cloudflared/description
+  Contains the command-line client for Cloudflare Tunnel, a tunneling
+  daemon that proxies traffic from the Cloudflare network to your origins.
+
+  This daemon sits between Cloudflare network and your origin (e.g. a
+  webserver). Cloudflare attracts client requests and sends them to you
+  via this daemon, without requiring you to poke holes on your firewall
+  --- your origin can remain as closed as possible.
 endef
 
-define Build/Prepare
-	$(call Build/Prepare/Default)
+define Package/cloudflared/conffiles
+/etc/config/cloudflared
+/etc/cloudflared/
 endef
 
-define Build/Compile
-	$(call GoPackage/Build/Compile)
-	# comment this line if upx not present
-	$(STAGING_DIR_HOST)/bin/upx --lzma --best $(GO_PKG_BUILD_BIN_DIR)/cloudflared
-	chmod +x ./files/etc/init.d/cloudflared
+define Package/cloudflared/install
+	$(call GoPackage/Package/Install/Bin,$(1))
+
+	$(INSTALL_DIR) $(1)/etc/cloudflared/
+	$(INSTALL_CONF) $(CURDIR)/files/sample_config.yml $(1)/etc/cloudflared/config.yml
+	$(INSTALL_DIR) $(1)/etc/config/
+	$(INSTALL_CONF) $(CURDIR)/files/cloudflared.config $(1)/etc/config/cloudflared
+	$(INSTALL_DIR) $(1)/etc/init.d/
+	$(INSTALL_BIN) $(CURDIR)/files/cloudflared.init $(1)/etc/init.d/cloudflared
 endef
 
-define Package/$(PKG_NAME)/install
-	$(CP) ./files/* $(1)/
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(GO_PKG_BUILD_BIN_DIR)/cloudflared $(1)/usr/bin/cloudflared
-endef
-$(eval $(call GoBinPackage,$(PKG_NAME)))
-$(eval $(call BuildPackage,$(PKG_NAME)))
+$(eval $(call GoBinPackage,cloudflared))
+$(eval $(call BuildPackage,cloudflared))
